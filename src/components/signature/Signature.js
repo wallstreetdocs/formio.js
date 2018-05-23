@@ -1,4 +1,6 @@
 import SignaturePad from 'signature_pad/dist/signature_pad.js';
+import _ from 'lodash';
+
 import BaseComponent from '../base/Base';
 
 export default class SignatureComponent extends BaseComponent {

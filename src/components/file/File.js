@@ -1,5 +1,6 @@
 import BaseComponent from '../base/Base';
 import {uniqueName} from '../../utils/utils';
+import Formio from '../../Formio';
 
 export default class FileComponent extends BaseComponent {
   static schema(...extend) {
@@ -550,7 +551,7 @@ export default class FileComponent extends BaseComponent {
         if (file.storage === 'base64') {
           // this is a workaround to render base64 files in Chrome. Still not working on IE/Edge
           var hiddenElement = document.createElement('a');
-          hiddenElement.href = 'data:' + file.type + ';base64,' + encodeURI(file.data);
+          hiddenElement.href = `data:${file.type};base64,${encodeURI(file.data)}`;
           hiddenElement.target = '_blank';
           hiddenElement.download = file.originalName;
           hiddenElement.click();
