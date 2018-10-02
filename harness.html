@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+		<meta name="author" content="Wall Street Docs Ltd <www.wallstreetdocs.com>">
+		<base href="/">
+		<title>WSD Form.IO Test Harness</title>
+
+		<!-- Theme Styles -->
+		<link rel="stylesheet" href="app/bootstrap/css/bootstrap.css">
+		<link rel="stylesheet" href="app/bootstrap/css/bootstrap-theme.css">
+		<link rel="stylesheet" href="dist/formio.full.css">
+
+		<!-- JS Libs -->
+		<script src="app/jquery/jquery.slim.min.js"></script>
+		<script src="harness/harness.js"></script>
+		<script src="dist/formio.full.js"></script>
+
+		<script src="harness/vehicles.form.js"></script>
+		<style>
+			h1{
+				margin: 1em 0 .6em;
+			}
+			.panel-title, .panel-body {
+				padding : 1em;
+			}
+		</style>
+
+	</head>
+	<body>
+
+		<!-- Nav -->
+		<nav class="navbar navbar-inverse navbar-fixed-top">
+			<div class="container">
+				<div class="navbar-header">
+					<a class="navbar-brand" href="#">Form.IO Test Harness</a>
+				</div>
+				<!--	<ul class="nav navbar-nav">
+						<li class="active"><a href="/">Home</a></li>
+					</ul>-->
+			</div>
+		</nav>
+
+		<!-- Body -->
+		<div class="container">
+
+			<h1>Form.IO Test Harness</h1>
+
+			<div class="panel panel-primary">
+				<div class="panel-heading">
+					<h3 class="panel-title">Vehicles</h3>
+				</div>
+				<div class="panel-body">
+					<h4>Child to Parent (Advanced Conditional)</h4>
+					<p>Wheels only shows if vehicle is "Car" <code>show=(wsdGetFormValue('data.vehicle') === 'car')</code></p>
+					<pre>show=(WSDFormIO.getValue('data.vehicle') === 'car')</pre>
+					<h4>Child to Child (JSONLogic Conditional)</h4>
+					<p>Windows only shows if wheels is greater than 2</p>
+					<pre>
+{
+	">": [
+		{
+			"method": [
+				{ "var": "WSDFormIO" },
+				"getValue",
+				[ "data.wheels.data.chooseWheels" ]
+			]
+		},
+		2
+	]
+}
+					</pre>
+				</div>
+				<div class="panel-body">
+					Form.IO Definitions:<br />
+					<a href="https://devbarry-tradeforms-v3.form.io/vehiclestest" target="_blank">https://devbarry-tradeforms-v3.form.io/vehiclestest</a><br />
+					<a href="https://devbarry-tradeforms-v3.form.io/wheels" target="_blank">https://devbarry-tradeforms-v3.form.io/wheels</a><br />
+					<a href="https://devbarry-tradeforms-v3.form.io/windowsform" target="_blank">https://devbarry-tradeforms-v3.form.io/windowsform</a>
+				</div>
+				<div class="panel-body">
+					<section id="form_embed__vehicletest"></section>
+				</div>
+			</div>
+
+		</div>
+
+	</body>
+</html>

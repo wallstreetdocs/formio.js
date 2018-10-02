@@ -1,7 +1,7 @@
 {
-  "coverage": "20.62%",
-  "expectCount": 1445,
-  "actualCount": 298,
+  "coverage": "20.66%",
+  "expectCount": 1447,
+  "actualCount": 299,
   "files": {
     "src/Component.js": {
       "expectCount": 35,
@@ -1711,20 +1711,21 @@
       ]
     },
     "src/utils/utils.js": {
-      "expectCount": 49,
-      "actualCount": 38,
+      "expectCount": 51,
+      "actualCount": 39,
       "undocumentLines": [
         99,
-        495,
-        559,
-        655,
-        717,
-        867,
-        933,
-        979,
-        995,
-        1010,
-        1025
+        497,
+        561,
+        657,
+        719,
+        869,
+        935,
+        981,
+        997,
+        1012,
+        1027,
+        1173
       ]
     },
     "src/widgets/CalendarWidget.js": {
