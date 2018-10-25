@@ -84,7 +84,7 @@ export function evaluate ( func, args, ret, tokenize ) {
 	else if ( typeof func === 'object' ) {
 		try {
 
-			console.log ( 'args', args );
+			//console.log ( 'args', args );
 
 			returnVal = jsonLogic.apply ( func, args );
 		}
