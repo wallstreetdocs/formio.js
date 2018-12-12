@@ -3,6 +3,7 @@ import BaseComponent from '../base/Base';
 export default class ContentComponent extends BaseComponent {
   static schema(...extend) {
     return BaseComponent.schema({
+      label: 'Content',
       type: 'content',
       key: 'content',
       input: false,
@@ -41,10 +42,11 @@ export default class ContentComponent extends BaseComponent {
     if (this.options.builder) {
       const editorElement = this.ce('div');
       this.element.appendChild(editorElement);
-      this.addQuill(editorElement, this.wysiwygDefault, (element) => {
-        this.component.html = element.value;
+      this.addCKE(editorElement, null, (html) => {
+        this.component.html = html;
       }).then((editor) => {
-        editor.setContents(editor.clipboard.convert(this.component.html));
+        this.editor = editor;
+        this.editor.data.set(this.component.html);
       }).catch(err => console.warn(err));
     }
     else {
@@ -60,5 +62,13 @@ export default class ContentComponent extends BaseComponent {
 
   get emptyValue() {
     return '';
+  }
+
+  destroy() {
+    const state = super.destroy();
+    if (this.editor) {
+      this.editor.destroy();
+    }
+    return state;
   }
 }

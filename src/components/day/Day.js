@@ -1,5 +1,4 @@
 import _ from 'lodash';
-import moment from 'moment';
 import BaseComponent from '../base/Base';
 import { boolValue, getLocaleDateFormatInfo } from '../../utils/utils';
 
@@ -43,7 +42,7 @@ export default class DayComponent extends BaseComponent {
 
   constructor(component, options, data) {
     super(component, options, data);
-    this.validators.push('date');
+    this.validators = this.validators.concat(['day', 'maxDate', 'minDate']);
     const dateFormatInfo = getLocaleDateFormatInfo(this.options.language);
     this.dayFirst = this.component.useLocaleSettings
       ? dateFormatInfo.dayFirst
@@ -92,7 +91,7 @@ export default class DayComponent extends BaseComponent {
       return this._months;
     }
     this._months = [
-      { value: 0, label: _.get(this.component, 'fields.month.placeholder') || (this.hideInputLabels ? this.t('Month') : '') },
+      { value: undefined, label: _.get(this.component, 'fields.month.placeholder') || (this.hideInputLabels ? this.t('Month') : '') },
       { value: 1, label: this.t('january') },
       { value: 2, label: this.t('february') },
       { value: 3, label: this.t('march') },
@@ -109,11 +108,22 @@ export default class DayComponent extends BaseComponent {
     return this._months;
   }
 
+  getInputValue(input, defaultValue) {
+    if (_.isObject(input)) {
+      if (!_.isNaN(input.value)) {
+        return parseInt(input.value, 10);
+      }
+    }
+
+    return defaultValue;
+  }
+
   validateRequired(setting, value) {
-    const day = _.isNaN(this.dayInput.value) ? 0 : parseInt(this.dayInput.value, 10);
-    const month = _.isNaN(this.monthInput.value) ? -1 : (parseInt(this.monthInput.value, 10) - 1);
-    const year = _.isNaN(this.yearInput.value) ? 0 : parseInt(this.yearInput.value, 10);
-    if (this.dayRequired && !day) {
+    const day = this.getInputValue(this.dayInput, 0);
+    const month = this.getInputValue(this.monthInput, 0) - 1;
+    const year = this.getInputValue(this.yearInput, 0);
+
+    if (this.dayRequired && day === 0) {
       return false;
     }
 
@@ -121,7 +131,7 @@ export default class DayComponent extends BaseComponent {
       return false;
     }
 
-    if (this.yearRequired && !year) {
+    if (this.yearRequired && year === 0) {
       return false;
     }
 
@@ -381,17 +391,22 @@ export default class DayComponent extends BaseComponent {
       return null;
     }
     const parts = value.split('/');
+    let day, month, year;
     if (this.component.dayFirst && this.showDay) {
-      this.dayInput.value = parseInt(parts.shift(), 10);
+      day = parts.shift();
+      this.dayInput.value = day === '00' ? undefined : parseInt(day, 10);
     }
     if (this.showMonth) {
-      this.monthInput.value = parseInt(parts.shift(), 10);
+      month = parts.shift();
+      this.monthInput.value = month === '00' ? undefined : parseInt(month, 10);
     }
     if (!this.component.dayFirst && this.showDay) {
-      this.dayInput.value = parseInt(parts.shift(), 10);
+      day = parts.shift();
+      this.dayInput.value = day === '00' ? undefined : parseInt(day, 10);
     }
     if (this.showYear) {
-      this.yearInput.value = parseInt(parts.shift(), 10);
+      year = parts.shift();
+      this.yearInput.value = year === '0000' ? undefined : parseInt(year, 10);
     }
   }
 
@@ -412,8 +427,61 @@ export default class DayComponent extends BaseComponent {
     }
     if (this.showYear) {
       format += 'YYYY';
+      return format;
     }
-    return format;
+    else {
+      // Trim off the "/" from the end of the format string.
+      return format.length ? format.substring(0, format.length - 1) : format;
+    }
+  }
+
+  /**
+   * Return the date for this component.
+   *
+   * @param value
+   * @return {*}
+   */
+  getDate(value) {
+    let defaults = [], day, month, year;
+    // Map positions to identifiers to get default values for each part of day
+    const [DAY, MONTH, YEAR] = this.component.dayFirst ? [0, 1, 2] : [1, 0, 2];
+    const defaultValue = value || this.component.defaultValue;
+    if (defaultValue) {
+      defaults = defaultValue.split('/').map(x => parseInt(x, 10));
+    }
+    if (this.showDay && this.dayInput) {
+      day = parseInt(this.dayInput.value, 10);
+    }
+    if (day === undefined || _.isNaN(day)) {
+      day = defaults[DAY] && !_.isNaN(defaults[DAY]) ? defaults[DAY] : 0;
+    }
+    if (this.showMonth && this.monthInput) {
+      month = parseInt(this.monthInput.value, 10);
+    }
+    if (month === undefined || _.isNaN(month)) {
+      month = defaults[MONTH] && !_.isNaN(defaults[MONTH]) ? defaults[MONTH] : 0;
+    }
+    if (this.showYear && this.yearInput) {
+      year = parseInt(this.yearInput.value);
+    }
+    if (year === undefined || _.isNaN(year)) {
+      year = defaults[YEAR] && !_.isNaN(defaults[YEAR]) ? defaults[YEAR] : 0;
+    }
+    let result;
+    if (!day && !month && !year) {
+      return undefined;
+    }
+    //add trailing zeros
+    day = day.toString().padStart(2, 0);
+    month = month.toString().padStart(2, 0);
+    year = year.toString().padStart(4, 0);
+    if (this.component.dayFirst) {
+      result = `${day}/${month}/${year}`;
+    }
+    else {
+      result = `${month}/${day}/${year}`;
+    }
+    return result;
   }
 
   /**
@@ -421,50 +489,7 @@ export default class DayComponent extends BaseComponent {
    * @returns {Date}
    */
   get date() {
-    const options = {};
-    let defaults = [];
-    // Map positions to identifiers
-    const [DAY, MONTH, YEAR] = this.component.dayFirst ? [0, 1, 2] : [1, 0, 2];
-
-    if (this.component.defaultValue) {
-      defaults = this.component.defaultValue
-        .split('/')
-        .map(x => parseInt(x, 10));
-    }
-
-    const day = this.showDay ? parseInt(this.dayInput.value, 10) : NaN;
-
-    if (!_.isNaN(day)) {
-      options.day = day;
-    }
-    else if (defaults[DAY] && !_.isNaN(defaults[DAY])) {
-      options.day = defaults[DAY];
-    }
-
-    const month = this.showMonth ? parseInt(this.monthInput.value, 10) : NaN;
-
-    if (!_.isNaN(month) && month > 0) {
-      // Months are 0 indexed.
-      options.month = (month - 1);
-    }
-    else if (defaults[MONTH] && !_.isNaN(defaults[MONTH])) {
-      options.month = defaults[MONTH] - 1;
-    }
-
-    const year = this.showYear ? parseInt(this.yearInput.value) : NaN;
-
-    if (!_.isNaN(year)) {
-      options.year = year;
-    }
-    else if (defaults[YEAR] && !_.isNaN(defaults[YEAR])) {
-      options.year = defaults[YEAR];
-    }
-
-    if (_.isEmpty(options)) {
-      return null;
-    }
-
-    return moment(options);
+    return this.getDate();
   }
 
   /**
@@ -473,12 +498,7 @@ export default class DayComponent extends BaseComponent {
    * @returns {Date}
    */
   get validationValue() {
-    const date = this.date;
-    if (!date) {
-      return null;
-    }
-
-    return date.format();
+    return this.date;
   }
 
   /**
@@ -490,7 +510,7 @@ export default class DayComponent extends BaseComponent {
   getValueAt(index) {
     const date = this.date;
     if (date) {
-      this.inputs[index].value = date.format(this.format);
+      this.inputs[index].value = date;
       return this.inputs[index].value;
     }
     else {
@@ -499,12 +519,14 @@ export default class DayComponent extends BaseComponent {
     }
   }
 
-  getView() {
-    const date = this.date;
-    if (!date) {
-      return null;
-    }
-    return date.isValid() ? date.format(this.format) : null;
+  /**
+   * Get the view of the date.
+   *
+   * @param value
+   * @return {null}
+   */
+  getView(value) {
+    return this.getDate(value);
   }
 
   focus() {
@@ -517,5 +539,14 @@ export default class DayComponent extends BaseComponent {
     else if (!this.showDay && !this.showDay && this.showYear) {
       this.yearInput.focus();
     }
+  }
+
+  isPartialDay(value) {
+    if (!value) {
+      return false;
+    }
+    const [DAY, MONTH, YEAR] = this.component.dayFirst ? [0, 1, 2] : [1, 0, 2];
+    const values = value.split('/');
+    return (values[DAY] === '00' || values[MONTH] === '00' || values[YEAR] === '0000');
   }
 }

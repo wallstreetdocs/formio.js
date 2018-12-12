@@ -4,7 +4,7 @@ export default [
     input: true,
     label: 'Questions',
     key: 'questions',
-    tooltip: 'The questions you would like to as in this survey question.',
+    tooltip: 'The questions you would like to ask in this survey question.',
     weight: 50,
     defaultValue: [{ label: '', value: '' }],
     components: [
@@ -19,6 +19,7 @@ export default [
         key: 'value',
         input: true,
         type: 'textfield',
+        allowCalculateOverride: true,
         calculateValue: { _camelCase: [{ var: 'row.label' }] }
       }
     ]
@@ -43,6 +44,7 @@ export default [
         key: 'value',
         input: true,
         type: 'textfield',
+        allowCalculateOverride: true,
         calculateValue: { _camelCase: [{ var: 'row.label' }] }
       }
     ]

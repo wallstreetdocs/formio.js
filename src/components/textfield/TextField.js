@@ -10,6 +10,11 @@ export default class TextFieldComponent extends BaseComponent {
       mask: false,
       inputType: 'text',
       inputMask: '',
+      widget: {
+        format: 'yyyy-MM-dd hh:mm a',
+        dateFormat: 'yyyy-MM-dd hh:mm a',
+        saveAs: 'text'
+      },
       validate: {
         minLength: '',
         maxLength: '',
@@ -134,11 +139,12 @@ export default class TextFieldComponent extends BaseComponent {
     }
   }
 
-  setValueAt(index, value) {
+  setValueAt(index, value, flags) {
+    flags = flags || {};
     if (!this.isMultipleMasksField) {
-      return super.setValueAt(index, value);
+      return super.setValueAt(index, value, flags);
     }
-    const defaultValue = this.defaultValue;
+    const defaultValue = flags.noDefault ? this.emptyValue : this.defaultValue;
     if (!value) {
       if (defaultValue) {
         value = defaultValue;

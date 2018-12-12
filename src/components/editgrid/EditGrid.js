@@ -2,7 +2,6 @@ import _ from 'lodash';
 import NestedComponent from '../nested/NestedComponent';
 import BaseComponent from '../base/Base';
 import Components from '../Components';
-import { checkCondition } from '../../utils/utils';
 
 export default class EditGridComponent extends NestedComponent {
   static schema(...extend) {
@@ -50,12 +49,14 @@ export default class EditGridComponent extends NestedComponent {
       {{ getView(component, row[component.key]) }}
     </div>
   {% }) %}
-  <div class="col-sm-2">
-    <div class="btn-group pull-right">
-      <button class="btn btn-default btn-sm editRow">Edit</button>
-      <button class="btn btn-danger btn-sm removeRow">Delete</button>
+  {% if (!instance.options.readOnly) { %}
+    <div class="col-sm-2">
+      <div class="btn-group pull-right">
+        <button class="btn btn-default btn-sm editRow">Edit</button>
+        <button class="btn btn-danger btn-sm removeRow">Delete</button>
+      </div>
     </div>
-  </div>
+  {% } %}
 </div>`;
   }
 
@@ -95,8 +96,8 @@ export default class EditGridComponent extends NestedComponent {
     });
 
     this.buildTable();
-    this.createDescription(this.element);
     this.createAddButton();
+    this.createDescription(this.element);
     this.element.appendChild(this.errorContainer = this.ce('div', { class: 'has-error' }));
     this.attachLogic();
   }
@@ -110,14 +111,14 @@ export default class EditGridComponent extends NestedComponent {
       return this.addRow(true);
     }
     let tableClass = 'editgrid-listgroup list-group ';
-    _.each(['striped', 'bordered', 'hover', 'condensed'], (prop) => {
+    ['striped', 'bordered', 'hover', 'condensed'].forEach((prop) => {
       if (this.component[prop]) {
         tableClass += `table-${prop} `;
       }
     });
     const tableElement = this.ce('ul', { class: tableClass }, [
       this.headerElement = this.createHeader(),
-      this.rowElements = _.map(this.editRows, this.createRow.bind(this)),
+      this.rowElements = this.editRows.map(this.createRow.bind(this)),
       this.footerElement = this.createFooter(),
     ]);
 
@@ -128,9 +129,7 @@ export default class EditGridComponent extends NestedComponent {
       this.element.appendChild(tableElement);
     }
     //add open class to the element if any edit grid row is open
-    const isAnyRowOpen = _.some(this.editRows, function(row) {
-      return row.isOpen;
-    });
+    const isAnyRowOpen = this.editRows.some((row) => row.isOpen);
     if (isAnyRowOpen) {
       this.addClass(this.element, `formio-component-${this.component.type}-row-open`);
     }
@@ -256,9 +255,9 @@ export default class EditGridComponent extends NestedComponent {
       changed |= comp.calculateValue(data, {
         noUpdateEvent: true
       });
-      comp.checkConditions(this.editRows[index].data);
+      comp.checkConditions(data);
       if (!flags.noValidate) {
-        valid &= comp.checkValidity(this.editRows[index].data, !this.editRows[index].isOpen);
+        valid &= comp.checkValidity(data, !this.editRows[index].isOpen);
       }
     });
 
@@ -402,7 +401,7 @@ export default class EditGridComponent extends NestedComponent {
     const isDirty = dirty || !!this.editRows[rowIndex].dirty;
     this.editRows[rowIndex].components.forEach(comp => {
       comp.setPristine(!isDirty);
-      check &= comp.checkValidity(this.editRows[rowIndex].data, isDirty);
+      check &= comp.checkValidity(null, isDirty, this.editRows[rowIndex].data);
     });
 
     if (this.component.validate && this.component.validate.row) {
@@ -427,7 +426,7 @@ export default class EditGridComponent extends NestedComponent {
   }
 
   checkValidity(data, dirty) {
-    if (!checkCondition(this.component, data, this.data, this.root ? this.root._form : {}, this)) {
+    if (!this.checkCondition(null, data)) {
       this.setCustomValidity('');
       return true;
     }
@@ -503,6 +502,8 @@ export default class EditGridComponent extends NestedComponent {
 
   setValue(value) {
     if (!value) {
+      this.editRows = this.defaultValue;
+      this.buildTable();
       return;
     }
     if (!Array.isArray(value)) {
@@ -549,5 +550,17 @@ export default class EditGridComponent extends NestedComponent {
    */
   getValue() {
     return this.dataValue;
+  }
+
+  clearOnHide(show) {
+    super.clearOnHide(show);
+    if (!this.component.clearOnHide) {
+      // If some components set to clearOnHide we need to clear them.
+      this.buildTable();
+    }
+  }
+
+  restoreComponentsContext() {
+    return;
   }
 }

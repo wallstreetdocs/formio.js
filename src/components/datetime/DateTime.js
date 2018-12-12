@@ -51,14 +51,28 @@ export default class DateTimeComponent extends BaseComponent {
   constructor(component, options, data) {
     super(component, options, data);
     const timezone = (this.component.timezone || this.options.timezone);
-    const submissionTimezone = this.options.submissionTimezone ||  _.get(this.root, 'options.submissionTimezone');
+    const time24hr = !_.get(this.component, 'timePicker.showMeridian', true);
+
+    // Change the format to map to the settings.
+    if (!this.component.enableDate) {
+      this.component.format = this.component.format.replace(/yyyy-MM-dd /g, '');
+    }
+    if (!this.component.enableTime) {
+      this.component.format = this.component.format.replace(/ hh:mm a$/g, '');
+    }
+    else if (time24hr) {
+      this.component.format = this.component.format.replace(/hh:mm a$/g, 'HH:mm');
+    }
+    else {
+      this.component.format = this.component.format.replace(/HH:mm$/g, 'hh:mm a');
+    }
 
     /* eslint-disable camelcase */
     this.component.widget = {
       type: 'calendar',
       timezone,
       displayInTimezone: _.get(this.component, 'displayInTimezone', 'viewer'),
-      submissionTimezone,
+      submissionTimezone: this.submissionTimezone,
       language: this.options.language,
       useLocaleSettings: _.get(this.component, 'useLocaleSettings', false),
       allowInput: _.get(this.component, 'allowInput', true),
@@ -69,7 +83,8 @@ export default class DateTimeComponent extends BaseComponent {
       defaultDate: this.component.defaultDate,
       hourIncrement: _.get(this.component, 'timePicker.hourStep', 1),
       minuteIncrement: _.get(this.component, 'timePicker.minuteStep', 5),
-      time_24hr: !_.get(this.component, 'timePicker.showMeridian', true),
+      time_24hr: time24hr,
+      readOnly: this.options.readOnly,
       minDate: _.get(this.component, 'datePicker.minDate'),
       maxDate: _.get(this.component, 'datePicker.maxDate')
     };
@@ -77,6 +92,13 @@ export default class DateTimeComponent extends BaseComponent {
 
     // Add the validators date.
     this.validators.push('date');
+  }
+
+  performInputMapping(input) {
+    if (input.widget && this.widget.settings) {
+      input.widget.settings.submissionTimezone = this.submissionTimezone;
+    }
+    return input;
   }
 
   get defaultSchema() {

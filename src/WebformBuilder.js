@@ -210,6 +210,9 @@ export default class WebformBuilder extends Webform {
   updateComponent(component) {
     // Update the preview.
     if (this.componentPreview) {
+      if (this.preview) {
+        this.preview.destroy();
+      }
       this.preview = Components.create(component.component, {
         preview: true,
         events: new EventEmitter({
@@ -248,7 +251,8 @@ export default class WebformBuilder extends Webform {
         'label',
         'placeholder',
         'tooltip',
-        'validate'
+        'validate',
+        'disabled'
       ]));
     }
 
@@ -256,9 +260,12 @@ export default class WebformBuilder extends Webform {
     this.emit('updateComponent', component);
   }
 
+  /* eslint-disable max-statements */
   editComponent(component) {
     const componentCopy = _.cloneDeep(component);
-    const componentClass = Components.components[componentCopy.component.type];
+    let componentClass = Components.components[componentCopy.component.type];
+    const isCustom = componentClass === undefined;
+    componentClass = isCustom ? Components.components.unknown : componentClass;
     // Make sure we only have one dialog open at a time.
     if (this.dialog) {
       this.dialog.close();
@@ -346,7 +353,7 @@ export default class WebformBuilder extends Webform {
     const overrides = _.get(this.options, `editForm.${componentCopy.component.type}`, {});
 
     // Get the editform for this component.
-    const editForm = Components.components[componentCopy.component.type].editForm(overrides);
+    const editForm = componentClass.editForm(overrides);
 
     // Change the defaultValue component to be reflective.
     this.defaultValueComponent = getComponent(editForm.components, 'defaultValue');
@@ -355,11 +362,12 @@ export default class WebformBuilder extends Webform {
       'label',
       'placeholder',
       'tooltip',
-      'validate'
+      'validate',
+      'disabled'
     ]));
 
     // Create the form instance.
-    this.editForm = new Webform(formioForm);
+    this.editForm = new Webform(formioForm, { language: this.options.language });
 
     // Set the form to the edit form.
     this.editForm.form = editForm;
@@ -374,13 +382,20 @@ export default class WebformBuilder extends Webform {
     // Register for when the edit form changes.
     this.editForm.on('change', (event) => {
       if (event.changed) {
-        // See if this is a manually modified key.
-        if (event.changed.component && (event.changed.component.key === 'key')) {
+        // See if this is a manually modified key. Treat custom component keys as manually modified
+        if ((event.changed.component && (event.changed.component.key === 'key')) || isCustom) {
           componentCopy.keyModified = true;
         }
 
         // Set the component JSON to the new data.
-        componentCopy.component = this.editForm.getValue().data;
+        var editFormData = this.editForm.getValue().data;
+        //for custom component use value in 'componentJson' field as JSON of component
+        if (editFormData.type === 'custom' && editFormData.componentJson) {
+          componentCopy.component = editFormData.componentJson;
+        }
+        else {
+          componentCopy.component = editFormData;
+        }
 
         // Update the component.
         this.updateComponent(componentCopy);
@@ -388,9 +403,19 @@ export default class WebformBuilder extends Webform {
     });
 
     // Modify the component information in the edit form.
-    this.editForm.formReady.then(() => this.editForm.setValue({ data: componentCopy.component }, {
-      noUpdateEvent: true
-    }));
+    this.editForm.formReady.then(() => {
+      //for custom component populate component setting with component JSON
+      if (isCustom) {
+        this.editForm.setValue({
+          data: {
+            componentJson: _.cloneDeep(componentCopy.component)
+          }
+        });
+      }
+      else {
+        this.editForm.setValue({ data: componentCopy.component });
+      }
+    });
 
     this.addEventListener(cancelButton, 'click', (event) => {
       event.preventDefault();
@@ -410,7 +435,13 @@ export default class WebformBuilder extends Webform {
       }
       event.preventDefault();
       component.isNew = false;
-      component.component = componentCopy.component;
+      //for custom component use value in 'componentJson' field as JSON of component
+      if (isCustom) {
+        component.component = this.editForm.data.componentJson;
+      }
+      else {
+        component.component = componentCopy.component;
+      }
       if (component.dragEvents && component.dragEvents.onSave) {
         component.dragEvents.onSave(component);
       }
@@ -421,6 +452,7 @@ export default class WebformBuilder extends Webform {
 
     this.addEventListener(this.dialog, 'close', () => {
       this.editForm.destroy();
+      this.preview.destroy();
       if (component.isNew) {
         this.deleteComponent(component);
       }
@@ -429,6 +461,7 @@ export default class WebformBuilder extends Webform {
     // Called when we edit a component.
     this.emit('editComponent', component);
   }
+  /* eslint-enable max-statements */
 
   /**
    * Creates copy of component schema and stores it under sessionStorage.
@@ -650,14 +683,16 @@ export default class WebformBuilder extends Webform {
   }
 
   addBuilderButton(info, container) {
+    let button;
     info.element = this.ce('div', {
         style: 'margin: 5px 0;'
       },
-      this.ce('span', {
+      button = this.ce('span', {
         class: `btn btn-block ${info.style || 'btn-default'}`,
-        onClick: () => this.emit(info.event)
       }, info.title)
     );
+    // Make sure it persists across refreshes.
+    this.addEventListener(button, 'click', () => this.emit(info.event), true);
     this.groups[info.key] = info;
     this.insertInOrder(info, this.groups, info.element, container);
   }
